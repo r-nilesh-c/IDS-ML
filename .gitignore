@@ -1,0 +1,80 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / lint / type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# -----------------------------
+# IDE / OS files
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Project-specific generated artifacts
+# -----------------------------
+# Large datasets (raw/processed)
+dataset/
+data/live/
+data/multimodal/
+data/multimodal_real/
+data/public_medical/
+
+# Trained model artifacts
+models/
+*.keras
+*.h5
+*.hdf5
+*.pkl
+*.joblib
+
+# Runtime logs
+logs/*.log
+logs/*.jsonl
+
+# Generated reports/plots (keep authored markdown docs)
+reports/*.json
+reports/*.txt
+reports/*.png
+reports/*.jpg
+reports/*.jpeg
+reports/*.csv
+reports/cascaded/
+reports/live/
+
+# Temp / local scratch
+tmp/
+*.tmp
+*.bak

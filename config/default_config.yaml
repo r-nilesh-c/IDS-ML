@@ -1,0 +1,409 @@
+# ============================================================================
+# Hybrid Anomaly-Based IDS Configuration
+# ============================================================================
+# This configuration file contains all hyperparameters and settings for the
+# Hybrid Anomaly-Based Intrusion Detection System designed for healthcare
+# networks. The system combines Autoencoder (deep learning) and Isolation
+# Forest (classical ML) for detecting known attacks, attack variations, and
+# zero-day threats.
+#
+# All paths are relative to the project root directory.
+# ============================================================================
+
+# ============================================================================
+# DATA PATHS
+# ============================================================================
+# Paths to input datasets, output logs, reports, and trained models
+
+# dataset_paths: List of paths to CIC-IDS CSV/Parquet files for training and evaluation
+# - CIC-IDS2017: Contains benign traffic and various attack types from 2017
+# - CIC-IDS2018: Contains benign traffic and various attack types from 2018 (different column names)
+# - For cross-dataset evaluation (zero-day testing), train on 2017 and test on 2018
+# - NOTE: 2017 and 2018 have incompatible column names, cannot be merged directly
+dataset_paths:
+  - "dataset/cic-ids2017/Monday-WorkingHours.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Tuesday-WorkingHours.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Wednesday-workingHours.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Friday-WorkingHours-Morning.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+  - "dataset/cic-ids2017/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv"
+
+# log_path: Path to JSON Lines file for logging detected anomalies
+# - Each line contains: timestamp, anomaly_score, prediction, flow_features
+# - Used for audit trail and compliance in healthcare environments
+log_path: "logs/anomalies.jsonl"
+
+# report_path: Path to save evaluation reports (JSON format)
+# - Contains metrics: accuracy, F1-score, FPR, recall, precision, ROC-AUC
+# - Includes deployment readiness assessment
+report_path: "reports/evaluation.json"
+
+# model_save_path: Directory to save trained models and normalization parameters
+# - autoencoder_best.keras: Trained autoencoder model
+# - isolation_forest.pkl: Trained Isolation Forest model
+# - fusion_params.pkl: Fusion module normalization parameters and threshold
+model_save_path: "models/"
+
+# ============================================================================
+# PREPROCESSING CONFIGURATION
+# ============================================================================
+# Settings for data loading, cleaning, normalization, and splitting
+
+preprocessing:
+  # test_size: Proportion of total data reserved for testing (0.0 to 1.0)
+  # - Default: 0.3 (30% for testing, 70% for training)
+  # - Test set contains both benign and attack samples
+  test_size: 0.3
+  
+  # val_size: Proportion of benign training data reserved for validation (0.0 to 1.0)
+  # - Default: 0.2 (20% of benign training data)
+  # - Validation set used for threshold computation and early stopping
+  # - Contains only benign samples
+  val_size: 0.2
+  
+  # random_state: Random seed for reproducibility
+  # - Used by NumPy, TensorFlow, scikit-learn, and Python random module
+  # - Set to fixed value (e.g., 42) for reproducible experiments
+  # - Change to different value for different random splits
+  random_state: 42
+  
+  # remove_outliers: Whether to remove outliers from benign training data
+  # - Default: false (DISABLED - was removing important patterns)
+  # - Reduces noise and improves autoencoder learning
+  remove_outliers: false
+  
+  # outlier_method: Method for outlier detection
+  # - 'iqr': Interquartile Range method (recommended)
+  # - 'zscore': Z-score method
+  outlier_method: 'iqr'
+  
+  # outlier_threshold: Threshold for outlier removal
+  # - For IQR: multiplier for IQR (default: 3.0)
+  # - For Z-score: number of standard deviations (default: 3.0)
+  # - Higher values = less aggressive outlier removal
+  # - INCREASED to 4.0 to preserve more data and improve recall
+  outlier_threshold: 4.0
+  
+  # use_robust_scaler: Use RobustScaler instead of StandardScaler
+  # - Default: false (StandardScaler works better after outlier removal)
+  # - RobustScaler uses median and IQR instead of mean and std
+  # - More robust to outliers than StandardScaler
+  # - NOTE: After outlier removal, StandardScaler is sufficient
+  use_robust_scaler: false
+  
+  # feature_selection: Whether to perform feature selection
+  # - Default: false (DISABLED - was removing discriminative features)
+  # - Reduces overfitting and improves performance
+  feature_selection: false
+  
+  # n_features: Number of features to select
+  # - Default: 30 (reduced from 78 original features)
+  # - Keeps most important features for anomaly detection
+  n_features: 30
+  
+  # feature_selection_method: Method for feature selection
+  # - 'variance': Select features with highest variance
+  # - 'statistical': Select features using F-test (discriminative power)
+  feature_selection_method: 'variance'
+
+# ============================================================================
+# AUTOENCODER CONFIGURATION
+# ============================================================================
+# Deep learning module for reconstruction-based anomaly detection
+# Trained exclusively on benign traffic to learn normal patterns
+
+autoencoder:
+  # encoding_dim: Dimension of the compressed latent representation
+  # - Default: 32 (compresses ~80 features to 32 dimensions)
+  # - Smaller values = more compression, may lose information
+  # - Larger values = less compression, may overfit
+  # - Typical range: 16-64 for network flow data
+  encoding_dim: 32
+  
+  # learning_rate: Step size for Adam optimizer
+  # - Default: 0.001 (standard for Adam)
+  # - Decrease if training is unstable (e.g., 0.0001)
+  # - Increase for faster convergence (e.g., 0.01), but risk instability
+  learning_rate: 0.001
+  
+  # epochs: Maximum number of training iterations
+  # - Default: 100
+  # - Early stopping may terminate training before reaching this limit
+  # - Increase if model hasn't converged (check training logs)
+  epochs: 100
+  
+  # batch_size: Number of samples per gradient update
+  # - Default: 256
+  # - Larger batches = faster training, more memory usage, less noise
+  # - Smaller batches = slower training, less memory, more noise
+  # - Typical range: 128-512 for network flow data
+  batch_size: 256
+  
+  # early_stopping_patience: Epochs to wait before stopping if no improvement
+  # - Default: 10
+  # - Monitors validation loss
+  # - Prevents overfitting and saves training time
+  early_stopping_patience: 10
+  
+  # use_gpu: Whether to use GPU acceleration if available
+  # - Default: true
+  # - Automatically falls back to CPU if GPU unavailable
+  # - GPU significantly speeds up training (10-50x faster)
+  use_gpu: true
+  
+  # mixed_precision: Whether to use mixed precision training (float16/float32)
+  # - Default: true
+  # - Reduces memory usage and speeds up training on modern GPUs
+  # - Requires GPU with Tensor Cores (NVIDIA RTX/V100/A100)
+  # - Automatically disabled if not supported
+  mixed_precision: true
+
+# ============================================================================
+# ISOLATION FOREST CONFIGURATION
+# ============================================================================
+# Classical ML module for isolation-based anomaly detection
+# Trained exclusively on benign traffic to identify outliers
+
+isolation_forest:
+  # n_estimators: Number of isolation trees in the forest
+  # - Default: 100
+  # - More trees = better performance, longer training/inference
+  # - Typical range: 50-200
+  # - Diminishing returns beyond 100-150 trees
+  n_estimators: 100
+  
+  # max_samples: Number of samples to draw for each tree
+  # - Default: 256
+  # - Can be integer (exact count) or "auto" (min(256, n_samples))
+  # - Smaller values = faster training, more diversity between trees
+  # - Larger values = slower training, less diversity
+  max_samples: 256
+  
+  # contamination: Expected proportion of anomalies in training data
+  # - Default: "auto" (not used since we train on benign-only data)
+  # - Can be float (0.0 to 0.5) to set explicit contamination
+  # - For benign-only training, "auto" is recommended
+  contamination: "auto"
+  
+  # n_jobs: Number of parallel jobs for training and inference
+  # - Default: -1 (use all available CPU cores)
+  # - Set to 1 for sequential processing (debugging)
+  # - Set to specific number to limit CPU usage
+  n_jobs: -1
+  
+  # random_state: Random seed for reproducibility
+  # - Used for tree construction and sample selection
+  # - Set to fixed value (e.g., 42) for reproducible experiments
+  random_state: 42
+
+# ============================================================================
+# FUSION CONFIGURATION
+# ============================================================================
+# Settings for combining Autoencoder and Isolation Forest outputs
+
+fusion:
+  # weight_autoencoder: Weight for autoencoder reconstruction error (0.0 to 1.0)
+  # - Default: 0.8 (INCREASED to make Stage 1 more conservative)
+  # - Autoencoder is better at learning complex normal patterns
+  # - Higher weight makes system more conservative (lower FPR)
+  # - Increase to prioritize deep learning detection (e.g., 0.8)
+  # - Must sum with weight_isolation to 1.0
+  weight_autoencoder: 0.7
+  
+  # weight_isolation: Weight for Isolation Forest anomaly score (0.0 to 1.0)
+  # - Default: 0.2 (DECREASED to complement autoencoder)
+  # - Isolation Forest provides complementary detection
+  # - Lower weight when autoencoder is more conservative
+  # - Must sum with weight_autoencoder to 1.0
+  weight_isolation: 0.3
+  
+  # percentile: Percentile of benign validation scores to use as threshold
+  # - Default: 99.5 (99.5th percentile) - INCREASED to fix FPR crisis
+  # - Higher values = lower FPR, lower recall (e.g., 99 for stricter threshold)
+  # - Lower values = higher FPR, higher recall (e.g., 95 for looser threshold)
+  # - Typical range: 95-99.5 for healthcare applications
+  # - 99.5 should make Stage 1 more selective (filter 70-80% instead of 9.83%)
+  percentile: 97
+
+# ============================================================================
+# HEALTHCARE DEPLOYMENT CONSTRAINTS
+# ============================================================================
+# Performance requirements for healthcare network deployment
+# Used for deployment readiness assessment
+
+healthcare:
+  # max_fpr: Maximum acceptable False Positive Rate (0.0 to 1.0)
+  # - Default: 0.05 (5%)
+  # - Healthcare environments require low FPR to minimize alert fatigue
+  # - FPR = FP / (FP + TN) = proportion of benign traffic misclassified
+  # - System must achieve FPR below this threshold for deployment
+  max_fpr: 0.05
+  
+  # min_recall: Minimum required Recall/Sensitivity (0.0 to 1.0)
+  # - Default: 0.90 (90%)
+  # - Healthcare environments require high recall to detect attacks
+  # - Recall = TP / (TP + FN) = proportion of attacks detected
+  # - System must achieve recall above this threshold for deployment
+  min_recall: 0.90
+  
+  # max_inference_latency_ms: Maximum per-sample inference time in milliseconds
+  # - Default: 100 (100ms = 0.1 seconds)
+  # - Required for near real-time detection in network traffic
+  # - Includes preprocessing, model inference, and fusion
+  # - System must process samples faster than this for deployment
+  max_inference_latency_ms: 100
+
+# ============================================================================
+# MULTIMODAL VALIDATION (Optional)
+# ============================================================================
+# Adds post-inference healthcare validation by combining network anomaly output
+# with physiological plausibility checks on medical signals.
+
+multimodal_validation:
+  # Enable post-validation in live monitor when medical columns are present
+  enabled: true
+
+  # Weighted combination of network anomaly score and medical risk score
+  network_weight: 0.55
+  medical_weight: 0.45
+
+  # Escalate benign network predictions when medical risk is high
+  medical_alert_threshold: 0.50
+
+  # Final multimodal threshold for alerting
+  combined_alert_threshold: 0.60
+
+  # Map canonical medical signal names to potential dataset columns
+  signal_aliases:
+    heart_rate: ['heart_rate', 'hr', 'pulse_rate', 'pr']
+    spo2: ['spo2', 'blood_oxygen', 'oxygen_saturation']
+    temperature: ['temperature', 'temp', 'body_temp']
+    systolic_bp: ['systolic_bp', 'sys', 'bp_sys', 'blood_pressure_sys']
+    diastolic_bp: ['diastolic_bp', 'dia', 'bp_dia', 'blood_pressure_dia']
+    respiration_rate: ['respiration_rate', 'rr', 'resp_rate']
+
+  # Plausibility and abrupt-change rules
+  signal_rules:
+    heart_rate:
+      min: 35
+      max: 220
+      max_delta: 35
+    spo2:
+      min: 80
+      max: 100
+      max_delta: 6
+    temperature:
+      min: 34
+      max: 42
+      max_delta: 1.2
+    systolic_bp:
+      min: 70
+      max: 220
+      max_delta: 40
+    diastolic_bp:
+      min: 40
+      max: 140
+      max_delta: 25
+    respiration_rate:
+      min: 6
+      max: 40
+      max_delta: 10
+
+# ============================================================================
+# CASCADED IDS CONFIGURATION (Two-Stage Detection)
+# ============================================================================
+# Configuration for the cascaded hybrid IDS system
+
+cascaded_ids:
+  # Stage 1: Anomaly Detection (Zero-Day Layer)
+  stage1:
+    enabled: true
+    # Threshold percentile for Stage 1 (higher recall, moderate FPR)
+    threshold_percentile: 95
+    # Fusion weights (should sum to 1.0)
+    fusion_weights:
+      autoencoder: 0.7
+      isolation: 0.3
+  
+  # Stage 2: Supervised Classification (Refinement Layer)
+  stage2:
+    enabled: true
+    model: 'random_forest'
+  
+  # Inference configuration
+  inference:
+    log_stage1_decisions: true
+    log_stage2_decisions: true
+    include_feature_importance: true
+    max_top_features: 10
+
+# ============================================================================
+# SUPERVISED CLASSIFIER CONFIGURATION (Stage 2)
+# ============================================================================
+# Random Forest classifier for attack classification and FP reduction
+
+supervised_classifier:
+  # n_estimators: Number of trees in the forest
+  # - Default: 200
+  # - More trees = better performance, longer training
+  # - Typical range: 100-300
+  n_estimators: 200
+  
+  # max_depth: Maximum depth of each tree
+  # - Default: 20
+  # - Deeper trees = more complex patterns, risk of overfitting
+  # - Typical range: 15-30
+  max_depth: 20
+  
+  # min_samples_split: Minimum samples required to split a node
+  # - Default: 10 (INCREASED to make classifier more conservative)
+  # - Higher values = more conservative splits, less overfitting, lower FPR
+  # - Typical range: 2-20
+  min_samples_split: 5
+  
+  # min_samples_leaf: Minimum samples required at leaf node
+  # - Default: 5 (INCREASED to make classifier more conservative)
+  # - Higher values = smoother decision boundaries, lower FPR
+  # - Typical range: 1-10
+  min_samples_leaf: 2
+  
+  # class_weight: How to handle class imbalance
+  # - 'balanced': Automatically adjust weights inversely proportional to class frequencies
+  # - 'balanced_subsample': Same as 'balanced' but computed on bootstrap sample
+  # - null: All classes have weight 1 (more conservative, reduces FPR)
+  class_weight: balanced
+  
+  # n_jobs: Number of parallel jobs
+  # - Default: -1 (use all CPU cores)
+  # - Set to 1 for sequential processing
+  n_jobs: -1
+  
+  # random_state: Random seed for reproducibility
+  random_state: 42
+
+# ============================================================================
+# ADVANCED SETTINGS (Optional)
+# ============================================================================
+# Additional settings for advanced users and specific use cases
+
+# logging_level: Verbosity of logging output
+# - Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# - Default: INFO (defined in logging_config.yaml)
+# logging_level: "INFO"
+
+# enable_visualization: Whether to generate plots during evaluation
+# - Default: true (generates ROC curves, PR curves, confusion matrices)
+# - Set to false to skip visualization (faster evaluation)
+# enable_visualization: true
+
+# save_predictions: Whether to save predictions to CSV file
+# - Default: false
+# - Set to true to save predictions for further analysis
+# save_predictions: false
+
+# checkpoint_frequency: How often to save model checkpoints during training
+# - Default: 10 (save every 10 epochs)
+# - Set to 0 to disable checkpointing
+# checkpoint_frequency: 10

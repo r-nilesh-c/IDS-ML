@@ -1,0 +1,163 @@
+# ============================================================================
+# Hybrid Anomaly-Based IDS for Healthcare Networks - Dependencies
+# ============================================================================
+# This file lists all Python dependencies required to run the system.
+# Install with: pip install -r requirements.txt
+#
+# For GPU support, install TensorFlow with CUDA:
+#   pip install tensorflow[and-cuda]>=2.13.0
+# ============================================================================
+
+# ============================================================================
+# CORE DEPENDENCIES
+# ============================================================================
+
+# Deep Learning Framework
+# - Used for Autoencoder implementation
+# - GPU support optional (automatically falls back to CPU)
+# - Version 2.13+ required for Python 3.11 support
+tensorflow>=2.13.0,<2.17.0
+
+# Machine Learning Library
+# - Used for Isolation Forest implementation
+# - Includes preprocessing utilities (StandardScaler)
+# - Version 1.3+ required for improved Isolation Forest performance
+scikit-learn>=1.3.0,<1.6.0
+
+# Data Manipulation
+# - Used for dataset loading and preprocessing
+# - Handles CSV and Parquet file formats
+# - Version 2.0+ required for improved performance
+pandas>=2.0.0,<2.3.0
+
+# Numerical Computing
+# - Foundation for all numerical operations
+# - Required by TensorFlow and scikit-learn
+# - Version 1.24+ required for Python 3.11 support
+numpy>=1.24.0,<2.0.0
+
+# ============================================================================
+# VISUALIZATION DEPENDENCIES
+# ============================================================================
+
+# Plotting Library
+# - Used for ROC curves, PR curves, and other visualizations
+# - Version 3.7+ required for improved plot quality
+matplotlib>=3.7.0,<3.10.0
+
+# Statistical Visualization
+# - Used for confusion matrix heatmaps
+# - Built on top of matplotlib
+# - Version 0.12+ required for improved aesthetics
+seaborn>=0.12.0,<0.14.0
+
+# ============================================================================
+# TESTING DEPENDENCIES
+# ============================================================================
+
+# Property-Based Testing
+# - Used for generating random test cases
+# - Validates universal correctness properties
+# - Version 6.82+ required for improved strategies
+hypothesis>=6.82.0,<7.0.0
+
+# Testing Framework
+# - Used for unit tests and integration tests
+# - Industry standard for Python testing
+# - Version 7.4+ required for improved fixtures
+pytest>=7.4.0,<8.4.0
+
+# ============================================================================
+# CONFIGURATION DEPENDENCIES
+# ============================================================================
+
+# YAML Parser
+# - Used for reading configuration files
+# - Handles default_config.yaml and logging_config.yaml
+# - Version 6.0+ required for security fixes
+pyyaml>=6.0,<7.0
+
+# ============================================================================
+# OPTIONAL DEPENDENCIES
+# ============================================================================
+# These dependencies are optional and can be installed separately if needed
+
+# GPU Support (Optional)
+# - Uncomment to install TensorFlow with CUDA support
+# - Requires NVIDIA GPU with CUDA 11.2+ and cuDNN 8.1+
+# - Significantly speeds up training (10-50x faster)
+# tensorflow[and-cuda]>=2.13.0,<2.17.0
+
+# Code Coverage (Optional)
+# - Used for measuring test coverage
+# - Install with: pip install pytest-cov
+# pytest-cov>=4.1.0,<6.0.0
+
+# Jupyter Notebook Support (Optional)
+# - Used for interactive exploration and visualization
+# - Install with: pip install jupyter
+# jupyter>=1.0.0,<2.0.0
+# ipykernel>=6.25.0,<7.0.0
+
+# Live Packet Capture (Optional)
+# - Required for real-time packet sniffing monitor (live_packet_monitor.py)
+# - Requires Npcap/WinPcap on Windows
+# scapy>=2.5.0,<3.0.0
+
+# Performance Profiling (Optional)
+# - Used for profiling inference latency
+# - Install with: pip install line-profiler memory-profiler
+# line-profiler>=4.0.0,<5.0.0
+# memory-profiler>=0.61.0,<1.0.0
+
+# ============================================================================
+# DEVELOPMENT DEPENDENCIES (Optional)
+# ============================================================================
+# These are only needed for development and can be omitted in production
+
+# Code Formatting (Optional)
+# - Install with: pip install black isort
+# black>=23.7.0,<25.0.0
+# isort>=5.12.0,<6.0.0
+
+# Linting (Optional)
+# - Install with: pip install flake8 pylint
+# flake8>=6.1.0,<8.0.0
+# pylint>=2.17.0,<4.0.0
+
+# Type Checking (Optional)
+# - Install with: pip install mypy
+# mypy>=1.5.0,<2.0.0
+
+# ============================================================================
+# COMPATIBILITY NOTES
+# ============================================================================
+# - Python 3.8, 3.9, 3.10, 3.11 supported
+# - Python 3.12+ may require newer dependency versions
+# - Windows, macOS, and Linux supported
+# - GPU support requires NVIDIA GPU with CUDA 11.2+ and cuDNN 8.1+
+# - Apple Silicon (M1/M2) users: Use tensorflow-macos and tensorflow-metal
+#
+# For Apple Silicon:
+#   pip install tensorflow-macos>=2.13.0
+#   pip install tensorflow-metal>=1.0.0
+# ============================================================================
+
+# ============================================================================
+# INSTALLATION INSTRUCTIONS
+# ============================================================================
+# 1. Create virtual environment (recommended):
+#    python -m venv venv
+#    source venv/bin/activate  # On Windows: venv\Scripts\activate
+#
+# 2. Install dependencies:
+#    pip install -r requirements.txt
+#
+# 3. For GPU support (optional):
+#    pip install tensorflow[and-cuda]>=2.13.0
+#
+# 4. Verify installation:
+#    python -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}')"
+#    python -c "import sklearn; print(f'scikit-learn {sklearn.__version__}')"
+#    pytest tests/ -v
+# ============================================================================

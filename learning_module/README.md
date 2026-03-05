@@ -9,28 +9,26 @@ Welcome! This module will teach you how to build a hybrid intrusion detection sy
 ## What You'll Build
 
 A production-ready hybrid IDS that:
+
 - Detects network intrusions using deep learning + classical ML
 - Trains only on benign traffic (zero-day detection capable)
 - Achieves <5% false positive rate for healthcare deployment
 - Processes network flows in real-time
 
-## Learning Path
+## Learning Path (Complete Sequence)
 
-### Phase 1: Foundations (Weeks 1-2)
-1. **Data Preprocessing Pipeline** - Learn data cleaning, normalization, and splitting
-2. **Understanding Network Flow Features** - Explore CIC-IDS datasets
-
-### Phase 2: Deep Learning Detection (Weeks 3-4)
-3. **Autoencoder Architecture** - Build reconstruction-based anomaly detection
-4. **Training Strategies** - Master benign-only training and early stopping
-
-### Phase 3: Classical ML Detection (Week 5)
-5. **Isolation Forest** - Implement tree-based anomaly detection
-6. **Comparative Analysis** - Understand strengths of each approach
-
-### Phase 4: Fusion & Deployment (Week 6)
-7. **Score Fusion** - Combine multiple detectors effectively
-8. **Healthcare Optimization** - Tune for low false positives
+1. **Lesson 1: Preprocessing** - `01_preprocessing/lesson.md`
+2. **Lesson 2: Autoencoder** - `02_autoencoder/lesson.md`
+3. **Lesson 3: Isolation Forest** - `03_isolation_forest/lesson.md`
+4. **Lesson 4: Fusion** - `04_fusion/lesson.md`
+5. **Lesson 5: Stage 1 Training** - `05_stage1_training/lesson.md`
+6. **Lesson 6: Supervised Stage 2** - `06_supervised_stage2/lesson.md`
+7. **Lesson 7: Cascaded Engine** - `07_cascaded_engine/lesson.md`
+8. **Lesson 8: Inference + Evaluation** - `08_inference_evaluation/lesson.md`
+9. **Lesson 9: Live CSV Monitoring** - `09_live_csv_monitoring/lesson.md`
+10. **Lesson 10: Live Packet Monitoring** - `10_live_packet_monitoring/lesson.md`
+11. **Lesson 11: Multimodal Validation** - `11_multimodal_validation/lesson.md`
+12. **Lesson 12: Hardening + Submission** - `12_hardening_and_submission/lesson.md`
 
 ## Prerequisites
 
@@ -42,13 +40,14 @@ A production-ready hybrid IDS that:
 ## How to Use This Module
 
 Each lesson includes:
+
 - **Concept Explanation**: Why this component matters
 - **Code Walkthrough**: Line-by-line explanation of the implementation
 - **Exercises**: Hands-on coding challenges
 - **Quiz**: Test your understanding
 - **Project**: Build the component yourself
 
-Start with `01_preprocessing/lesson.md` and work through sequentially.
+Start with `01_preprocessing/lesson.md` and continue in order through Lesson 12.
 
 ## Estimated Time
 

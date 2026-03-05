@@ -1,8 +1,17 @@
 # Lesson 1: Data Preprocessing Pipeline
 
+## Module Alignment (March 2026 Update)
+
+- Rebuild roadmap: `learning_module/PROJECT_REBUILD_MODULES.md`
+- Next lesson: `learning_module/02_autoencoder/lesson.md`
+- Solution files:
+  - `learning_module/solutions/01_preprocessing_solutions.py`
+  - `src/preprocessing.py`
+
 ## Learning Objectives
 
 By the end of this lesson, you will:
+
 - Understand why preprocessing is critical for IDS
 - Load and merge multiple network flow datasets
 - Clean data (handle NaN, inf, duplicates)
@@ -12,6 +21,7 @@ By the end of this lesson, you will:
 ## Why Preprocessing Matters
 
 In intrusion detection, preprocessing determines your model's success. Poor preprocessing leads to:
+
 - **Data leakage**: Test data influencing training
 - **Scale issues**: Features with different ranges dominating learning
 - **Noise**: Corrupted data causing false patterns
@@ -19,6 +29,7 @@ In intrusion detection, preprocessing determines your model's success. Poor prep
 ## The CIC-IDS Dataset
 
 CIC-IDS2017/2018 contains network flow features extracted from packet captures:
+
 - **Flow features**: Duration, packet counts, byte counts
 - **Statistical features**: Mean, std, min, max of packet sizes
 - **Timing features**: Inter-arrival times, idle times
@@ -46,6 +57,7 @@ def load_datasets(self, paths: List[str]) -> pd.DataFrame:
 **Key Concepts:**
 
 1. **Encoding Handling**: CSV files may use different encodings
+
    ```python
    for encoding in ['utf-8', 'latin-1', 'iso-8859-1']:
        try:
@@ -56,6 +68,7 @@ def load_datasets(self, paths: List[str]) -> pd.DataFrame:
    ```
 
 2. **Label Column Variations**: Different datasets use " Label", "Label", "label"
+
    ```python
    label_variations = [' Label', 'Label', 'label', ' label']
    for col_name in label_variations:
@@ -81,16 +94,19 @@ def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
 ```
 
 1. **Duplicates**: Exact row copies that bias training
+
    ```python
    df_no_duplicates = df.drop_duplicates()
    ```
 
 2. **NaN Values**: Missing data that breaks calculations
+
    ```python
    df_no_nan = df_no_duplicates.dropna()
    ```
 
 3. **Infinite Values**: Division by zero or overflow errors
+
    ```python
    numeric_cols = df.select_dtypes(include=[np.number]).columns
    inf_mask = np.isinf(df[numeric_cols]).any(axis=1)
@@ -106,6 +122,7 @@ def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
    ```
 
 **Critical Decision**: We remove problematic rows rather than imputing. Why?
+
 - Imputation can introduce artificial patterns
 - For IDS, we prefer clean data over maximum data
 - Benign traffic is abundant, so we can afford to be strict
@@ -115,6 +132,7 @@ def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
 ### Why Train Only on Benign Traffic?
 
 Traditional supervised learning requires labeled attack samples. But:
+
 - **Zero-day attacks**: No training data exists for new attacks
 - **Attack evolution**: Attackers constantly change tactics
 - **Imbalanced data**: Attacks are rare in real networks
@@ -135,6 +153,7 @@ def split_benign_attack(self, df: pd.DataFrame) -> tuple:
 ### Why Normalize?
 
 Network features have vastly different scales:
+
 - Packet count: 1-10,000
 - Duration: 0.001-1000 seconds
 - Byte count: 50-1,000,000
@@ -148,6 +167,7 @@ X_normalized = (X - mean) / std
 ```
 
 After scaling:
+
 - Mean ≈ 0
 - Standard deviation ≈ 1
 - All features contribute equally
@@ -175,11 +195,13 @@ All Data
 ```
 
 **Implementation:**
+
 1. Split all data into train_val (70%) and test (30%) with stratification
 2. Extract only benign samples from train_val
 3. Split benign samples into train (80%) and validation (20%)
 
 **Why Stratified Sampling?**
+
 ```python
 X_train_val, X_test, y_train_val, y_test = train_test_split(
     all_features, all_labels,
@@ -194,6 +216,7 @@ Stratification ensures test set has representative attack types.
 ## Exercises
 
 ### Exercise 1: Load a Single Dataset (Easy)
+
 ```python
 # TODO: Implement a function that loads one CSV file
 # Handle encoding errors gracefully
@@ -207,6 +230,7 @@ def load_single_dataset(path: str) -> pd.DataFrame:
 ```
 
 ### Exercise 2: Count Missing Values (Medium)
+
 ```python
 # TODO: Write a function that counts NaN, inf, and duplicate rows
 # Return a dictionary with counts
@@ -218,6 +242,7 @@ def count_data_issues(df: pd.DataFrame) -> dict:
 ```
 
 ### Exercise 3: Implement Simple Normalization (Medium)
+
 ```python
 # TODO: Implement min-max normalization (alternative to StandardScaler)
 # Formula: X_norm = (X - X_min) / (X_max - X_min)
@@ -229,6 +254,7 @@ def minmax_normalize(X_train: np.ndarray, X_test: np.ndarray) -> tuple:
 ```
 
 ### Exercise 4: Analyze Feature Distributions (Hard)
+
 ```python
 # TODO: Load a dataset and analyze feature distributions
 # Identify features with high skewness or outliers
@@ -243,18 +269,21 @@ def analyze_feature_distributions(df: pd.DataFrame):
 ## Quiz
 
 1. **Why do we fit StandardScaler only on training data?**
+
    - A) To save computation time
    - B) To prevent data leakage
    - C) To make validation faster
    - D) It doesn't matter
 
 2. **What happens if we don't remove infinite values?**
+
    - A) Model training will fail
    - B) Model will learn incorrect patterns
    - C) Predictions will be NaN
    - D) All of the above
 
 3. **Why use stratified sampling for the test set?**
+
    - A) To ensure all attack types are represented
    - B) To make the test set larger
    - C) To speed up evaluation
@@ -271,6 +300,7 @@ def analyze_feature_distributions(df: pd.DataFrame):
 **Goal**: Implement a simplified preprocessing pipeline
 
 **Requirements**:
+
 1. Load one CIC-IDS CSV file
 2. Remove NaN and infinite values
 3. Separate benign and attack samples
@@ -278,6 +308,7 @@ def analyze_feature_distributions(df: pd.DataFrame):
 5. Create train/test split (80/20)
 
 **Starter Code**:
+
 ```python
 import pandas as pd
 import numpy as np
@@ -287,11 +318,11 @@ from sklearn.model_selection import train_test_split
 class SimplePreprocessor:
     def __init__(self):
         self.scaler = StandardScaler()
-    
+
     def load_and_clean(self, path: str) -> pd.DataFrame:
         # TODO: Implement
         pass
-    
+
     def split_and_normalize(self, df: pd.DataFrame) -> dict:
         # TODO: Implement
         # Return: {'X_train': ..., 'X_test': ..., 'y_test': ...}

@@ -1,8 +1,18 @@
 # Lesson 2: Autoencoder for Anomaly Detection
 
+## Module Alignment (March 2026 Update)
+
+- Rebuild roadmap: `learning_module/PROJECT_REBUILD_MODULES.md`
+- Previous lesson: `learning_module/01_preprocessing/lesson.md`
+- Next lesson: `learning_module/03_isolation_forest/lesson.md`
+- Solution files:
+  - `learning_module/solutions/02_autoencoder_solutions.py`
+  - `src/autoencoder.py`
+
 ## Learning Objectives
 
 By the end of this lesson, you will:
+
 - Understand how autoencoders detect anomalies through reconstruction
 - Build a deep autoencoder architecture with TensorFlow/Keras
 - Implement training with early stopping and checkpointing
@@ -19,7 +29,8 @@ Input (77 features) → Encoder → Bottleneck (32 features) → Decoder → Out
 
 **Goal**: Make output identical to input (reconstruction task)
 
-**For Anomaly Detection**: 
+**For Anomaly Detection**:
+
 - Train on benign traffic only
 - Benign samples: Low reconstruction error (model learned them well)
 - Attack samples: High reconstruction error (model never saw them)
@@ -41,6 +52,7 @@ Decoder Layer 2: 77 neurons (input_dim)
 ```
 
 **Why the bottleneck?**
+
 - Forces the network to learn compressed representations
 - Can't just memorize inputs (not enough capacity)
 - Must learn meaningful patterns in benign traffic
@@ -56,11 +68,13 @@ activation='sigmoid'  # Sigmoid: 1 / (1 + e^-x), outputs [0, 1]
 ```
 
 **Why ReLU?**
+
 - Prevents vanishing gradients
 - Computationally efficient
 - Introduces non-linearity (enables learning complex patterns)
 
 **Why Sigmoid output?**
+
 - After normalization, features are roughly in [0, 1] range
 - Sigmoid naturally outputs [0, 1]
 - Smooth gradients for training
@@ -72,11 +86,13 @@ encoded = layers.Dropout(0.2)(encoded)
 ```
 
 **What dropout does:**
+
 - Randomly sets 20% of neurons to zero during training
 - Prevents overfitting (model relying too much on specific neurons)
 - Forces redundant representations
 
 **When to use:**
+
 - Small datasets (high overfitting risk)
 - Complex architectures
 - When validation loss increases while training loss decreases
@@ -96,6 +112,7 @@ class AutoencoderDetector:
 ```
 
 **Key Parameters:**
+
 - `input_dim`: Must match preprocessed feature count
 - `encoding_dim`: Bottleneck size (smaller = more compression)
 - `learning_rate`: Step size for gradient descent (0.001 is a good default)
@@ -107,19 +124,19 @@ class AutoencoderDetector:
 def build_model(self, use_dropout: bool = True) -> keras.Model:
     # Input layer
     input_layer = keras.Input(shape=(self.input_dim,))
-    
+
     # Encoder
     encoded = layers.Dense(self.encoding_dim * 2, activation='relu')(input_layer)
     if use_dropout:
         encoded = layers.Dropout(0.2)(encoded)
     encoded = layers.Dense(self.encoding_dim, activation='relu')(encoded)
-    
+
     # Decoder
     decoded = layers.Dense(self.encoding_dim * 2, activation='relu')(encoded)
     if use_dropout:
         decoded = layers.Dropout(0.2)(decoded)
     decoded = layers.Dense(self.input_dim, activation='sigmoid')(decoded)
-    
+
     # Create and compile model
     self.model = keras.Model(inputs=input_layer, outputs=decoded)
     self.model.compile(
@@ -131,14 +148,17 @@ def build_model(self, use_dropout: bool = True) -> keras.Model:
 ```
 
 **Loss Function: MSE (Mean Squared Error)**
+
 ```
 MSE = (1/n) * Σ(y_true - y_pred)²
 ```
+
 - Penalizes large errors heavily (squared term)
 - Differentiable (needed for backpropagation)
 - Standard for regression tasks
 
 **Optimizer: Adam**
+
 - Adaptive learning rate (adjusts per parameter)
 - Combines momentum and RMSprop
 - Works well out-of-the-box
@@ -153,14 +173,14 @@ def train(self, X_train: np.ndarray, X_val: np.ndarray):
         patience=10,  # Wait 10 epochs before stopping
         restore_best_weights=True  # Revert to best model
     )
-    
+
     # Model checkpoint: Save best model
     model_checkpoint = keras.callbacks.ModelCheckpoint(
         filepath='models/autoencoder_best.keras',
         monitor='val_loss',
         save_best_only=True
     )
-    
+
     # Train (note: input and output are the same!)
     history = self.model.fit(
         X_train, X_train,  # Reconstruction task
@@ -183,6 +203,7 @@ Epoch 31+: Training loss ↓, Validation loss ↑  (Overfitting!)
 Early stopping prevents overfitting by stopping when validation loss stops improving.
 
 **Patience Parameter:**
+
 - Too low (e.g., 3): Stops too early, underfitting
 - Too high (e.g., 50): Wastes time, may overfit
 - Sweet spot: 10-15 epochs
@@ -193,10 +214,10 @@ Early stopping prevents overfitting by stopping when validation loss stops impro
 def compute_reconstruction_error(self, X: np.ndarray) -> np.ndarray:
     # Get reconstructions
     reconstructions = self.model.predict(X, verbose=0)
-    
+
     # Compute MSE per sample
     mse_per_sample = np.mean(np.square(X - reconstructions), axis=1)
-    
+
     return mse_per_sample
 ```
 
@@ -219,6 +240,7 @@ Attack sample:
 ### Why Use GPU?
 
 Training time comparison (100 epochs, 100k samples):
+
 - CPU: ~30 minutes
 - GPU: ~3 minutes (10x faster)
 
@@ -227,7 +249,7 @@ Training time comparison (100 epochs, 100k samples):
 ```python
 def _configure_device(self):
     gpus = tf.config.list_physical_devices('GPU')
-    
+
     if self.use_gpu and len(gpus) > 0:
         # Enable memory growth (don't allocate all GPU memory)
         for gpu in gpus:
@@ -240,6 +262,7 @@ def _configure_device(self):
 ```
 
 **Memory Growth:**
+
 - Without: TensorFlow allocates all GPU memory upfront
 - With: Allocates memory as needed (allows multiple processes)
 
@@ -252,11 +275,13 @@ def _configure_mixed_precision(self):
 ```
 
 **What is mixed precision?**
+
 - Computation: float16 (16-bit, faster)
 - Accumulation: float32 (32-bit, stable)
 - Result: 2x faster training on modern GPUs (Volta, Turing, Ampere)
 
 **When to use:**
+
 - Large models
 - Large datasets
 - GPU with Tensor Cores (RTX 20xx, 30xx, 40xx, A100, etc.)
@@ -321,6 +346,7 @@ Sweet spot (128-256):
 ## Exercises
 
 ### Exercise 1: Build a Simple Autoencoder (Easy)
+
 ```python
 # TODO: Build a 2-layer autoencoder (1 encoder, 1 decoder)
 # Input: 10 features, Encoding: 3 features
@@ -339,6 +365,7 @@ model.summary()
 ```
 
 ### Exercise 2: Visualize Reconstruction (Medium)
+
 ```python
 # TODO: Train autoencoder on benign data
 # Visualize original vs reconstructed for 5 samples
@@ -352,6 +379,7 @@ def visualize_reconstruction(model, X_benign, X_attack):
 ```
 
 ### Exercise 3: Experiment with Encoding Dimension (Medium)
+
 ```python
 # TODO: Train autoencoders with encoding_dim = [8, 16, 32, 64, 128]
 # Compare validation loss and reconstruction error separation
@@ -363,6 +391,7 @@ def compare_encoding_dimensions(X_train, X_val, X_test_benign, X_test_attack):
 ```
 
 ### Exercise 4: Implement Denoising Autoencoder (Hard)
+
 ```python
 # TODO: Add Gaussian noise to inputs during training
 # This makes the autoencoder more robust
@@ -377,18 +406,21 @@ def build_denoising_autoencoder(input_dim, encoding_dim, noise_factor=0.1):
 ## Quiz
 
 1. **Why do we use sigmoid activation in the output layer?**
+
    - A) It's faster than ReLU
    - B) It outputs values in [0, 1] range
    - C) It prevents overfitting
    - D) It's required by TensorFlow
 
 2. **What does early stopping prevent?**
+
    - A) Underfitting
    - B) Overfitting
    - C) Data leakage
    - D) GPU errors
 
 3. **Why is the bottleneck layer important?**
+
    - A) It speeds up training
    - B) It forces compression and pattern learning
    - C) It reduces memory usage
@@ -405,6 +437,7 @@ def build_denoising_autoencoder(input_dim, encoding_dim, noise_factor=0.1):
 **Goal**: Implement a working autoencoder for anomaly detection
 
 **Requirements**:
+
 1. Build autoencoder with configurable architecture
 2. Train on benign traffic with early stopping
 3. Compute reconstruction errors
@@ -412,6 +445,7 @@ def build_denoising_autoencoder(input_dim, encoding_dim, noise_factor=0.1):
 5. Plot ROC curve
 
 **Starter Code**:
+
 ```python
 import numpy as np
 import tensorflow as tf
@@ -425,15 +459,15 @@ class MyAutoencoder:
         self.input_dim = input_dim
         self.encoding_dim = encoding_dim
         self.model = None
-    
+
     def build(self):
         # TODO: Implement
         pass
-    
+
     def train(self, X_train, X_val, epochs=50):
         # TODO: Implement
         pass
-    
+
     def predict_anomaly_scores(self, X):
         # TODO: Implement (return reconstruction errors)
         pass

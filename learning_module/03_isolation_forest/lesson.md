@@ -1,8 +1,17 @@
 # Lesson 3: Isolation Forest for Anomaly Detection
 
+## Module Alignment (March 2026 Update)
+
+- Rebuild roadmap: `learning_module/PROJECT_REBUILD_MODULES.md`
+- Previous lesson: `learning_module/02_autoencoder/lesson.md`
+- Next lesson: `learning_module/04_fusion/lesson.md`
+- Solution reference:
+  - `src/isolation_forest.py`
+
 ## Learning Objectives
 
 By the end of this lesson, you will:
+
 - Understand the isolation principle for anomaly detection
 - Implement Isolation Forest from scikit-learn
 - Compare tree-based vs neural network approaches
@@ -33,6 +42,7 @@ Attack sample (outlier):
 ```
 
 **Anomaly Score**: Average path length across multiple trees
+
 - Short paths → Anomaly
 - Long paths → Normal
 
@@ -49,6 +59,7 @@ for each tree:
 ```
 
 **Key Difference from Decision Trees:**
+
 - No labels needed (unsupervised)
 - Random splits (not optimized)
 - Goal: Isolate samples, not classify them
@@ -71,6 +82,7 @@ anomaly_score = 2^(-average_path_length / c(n))
 Where `c(n)` is a normalization factor based on sample size.
 
 **Anomaly Score Range**: [0, 1]
+
 - Close to 1: Anomaly
 - Close to 0.5: Normal
 - Close to 0: Very normal (deep in tree)
@@ -104,17 +116,17 @@ predictions = iso_forest.predict(X_test)   # -1 = anomaly, 1 = normal
 class IsolationForestDetector:
     """
     Isolation Forest-based anomaly detector.
-    
+
     Uses ensemble of isolation trees to detect anomalies
     through path length analysis.
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize Isolation Forest detector.
-        
+
         Args:
-            config: Dictionary with n_estimators, contamination, 
+            config: Dictionary with n_estimators, contamination,
                    max_samples, random_state
         """
         self.config = config
@@ -122,7 +134,7 @@ class IsolationForestDetector:
         self.contamination = config.get('contamination', 0.1)
         self.max_samples = config.get('max_samples', 'auto')
         self.random_state = config.get('random_state', 42)
-        
+
         # Initialize model
         self.model = IsolationForest(
             n_estimators=self.n_estimators,
@@ -132,50 +144,50 @@ class IsolationForestDetector:
             n_jobs=-1,  # Use all CPU cores
             verbose=0
         )
-        
+
         logger.info(f"IsolationForestDetector initialized with "
                    f"n_estimators={self.n_estimators}, "
                    f"contamination={self.contamination}")
-    
+
     def train(self, X_train: np.ndarray) -> None:
         """
         Train Isolation Forest on benign traffic.
-        
+
         Args:
             X_train: Benign training samples, shape (n_samples, n_features)
         """
         logger.info(f"Training Isolation Forest on {X_train.shape[0]} samples")
-        
+
         # Fit the model
         self.model.fit(X_train)
-        
+
         logger.info("Isolation Forest training completed")
-    
+
     def compute_anomaly_scores(self, X: np.ndarray) -> np.ndarray:
         """
         Compute anomaly scores for input samples.
-        
+
         Args:
             X: Input samples, shape (n_samples, n_features)
-            
+
         Returns:
             Anomaly scores (higher = more anomalous)
         """
         # Get scores from model (lower = more anomalous)
         raw_scores = self.model.score_samples(X)
-        
+
         # Invert scores (higher = more anomalous)
         anomaly_scores = -raw_scores
-        
+
         return anomaly_scores
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Predict anomaly labels.
-        
+
         Args:
             X: Input samples
-            
+
         Returns:
             Binary labels (0 = normal, 1 = anomaly)
         """
@@ -252,32 +264,35 @@ Sweet spot (0.05-0.15):
 
 ### Comparison Table
 
-| Aspect | Isolation Forest | Autoencoder |
-|--------|-----------------|-------------|
-| **Type** | Tree-based | Neural network |
-| **Training Speed** | Fast (seconds) | Slow (minutes) |
-| **Inference Speed** | Fast | Medium |
-| **Memory Usage** | Low | High (GPU) |
-| **Interpretability** | Medium (feature importance) | Low (black box) |
-| **Hyperparameters** | Few (2-3) | Many (5+) |
-| **Feature Interactions** | Limited | Captures complex patterns |
-| **Robustness** | High | Medium (sensitive to hyperparameters) |
+| Aspect                   | Isolation Forest            | Autoencoder                           |
+| ------------------------ | --------------------------- | ------------------------------------- |
+| **Type**                 | Tree-based                  | Neural network                        |
+| **Training Speed**       | Fast (seconds)              | Slow (minutes)                        |
+| **Inference Speed**      | Fast                        | Medium                                |
+| **Memory Usage**         | Low                         | High (GPU)                            |
+| **Interpretability**     | Medium (feature importance) | Low (black box)                       |
+| **Hyperparameters**      | Few (2-3)                   | Many (5+)                             |
+| **Feature Interactions** | Limited                     | Captures complex patterns             |
+| **Robustness**           | High                        | Medium (sensitive to hyperparameters) |
 
 ### When to Use Each
 
 **Use Isolation Forest when:**
+
 - Fast training is critical
 - Limited computational resources
 - Need interpretability (feature importance)
 - Data has clear outliers
 
 **Use Autoencoder when:**
+
 - Complex feature interactions exist
 - GPU available
 - Need to capture subtle patterns
 - Willing to tune hyperparameters
 
 **Use Both (Hybrid) when:**
+
 - Maximum detection accuracy needed
 - Can afford computational cost
 - Want robustness to different attack types
@@ -350,6 +365,7 @@ Validation-based:
 ## Exercises
 
 ### Exercise 1: Train Isolation Forest (Easy)
+
 ```python
 # TODO: Train Isolation Forest on benign data
 # Compute anomaly scores on test set
@@ -364,6 +380,7 @@ def train_and_evaluate_if(X_train_benign, X_test, y_test):
 ```
 
 ### Exercise 2: Hyperparameter Search (Medium)
+
 ```python
 # TODO: Grid search over n_estimators and contamination
 # Find best combination using F1-score
@@ -382,6 +399,7 @@ def hyperparameter_search(X_train, X_test, y_test):
 ```
 
 ### Exercise 3: Feature Importance (Medium)
+
 ```python
 # TODO: Analyze which features are most important for isolation
 # Hint: Features with high variance in path lengths are important
@@ -393,6 +411,7 @@ def analyze_feature_importance(iso_forest, X_train, feature_names):
 ```
 
 ### Exercise 4: Implement Hybrid Detector (Hard)
+
 ```python
 # TODO: Combine Autoencoder and Isolation Forest
 # Implement weighted fusion
@@ -405,11 +424,11 @@ class HybridDetector:
         self.isolation_forest = isolation_forest
         self.w_ae = 0.5
         self.w_if = 0.5
-    
+
     def optimize_weights(self, X_val, y_val):
         # Your code here
         pass
-    
+
     def predict(self, X):
         # Your code here
         pass
@@ -418,18 +437,21 @@ class HybridDetector:
 ## Quiz
 
 1. **Why are anomalies easier to isolate?**
+
    - A) They are always in the same location
    - B) They are rare and different from normal samples
    - C) They have higher feature values
    - D) They are closer to the origin
 
 2. **What does contamination parameter control?**
+
    - A) Training speed
    - B) Number of trees
    - C) Expected proportion of anomalies
    - D) Feature selection
 
 3. **Why combine Isolation Forest and Autoencoder?**
+
    - A) To make training faster
    - B) To reduce memory usage
    - C) To detect different types of anomalies
@@ -446,6 +468,7 @@ class HybridDetector:
 **Goal**: Implement a complete hybrid detection system
 
 **Requirements**:
+
 1. Train Isolation Forest on benign data
 2. Train Autoencoder on benign data (from Lesson 2)
 3. Implement score fusion with configurable weights
@@ -453,6 +476,7 @@ class HybridDetector:
 5. Generate performance report (precision, recall, F1)
 
 **Starter Code**:
+
 ```python
 class HybridIDS:
     def __init__(self, input_dim, config):
@@ -460,15 +484,15 @@ class HybridIDS:
         self.isolation_forest = IsolationForestDetector(config)
         self.w_ae = config.get('w_ae', 0.6)
         self.w_if = config.get('w_if', 0.4)
-    
+
     def train(self, X_train_benign, X_val_benign):
         # TODO: Train both detectors
         pass
-    
+
     def predict(self, X):
         # TODO: Fuse scores and predict
         pass
-    
+
     def evaluate(self, X_test, y_test):
         # TODO: Compute metrics
         pass

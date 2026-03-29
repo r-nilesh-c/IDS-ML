@@ -355,12 +355,25 @@ class SupervisedClassifier:
         """
         with open(filepath, 'rb') as f:
             model_data = pickle.load(f)
-        
-        self.model = model_data['model']
-        self.classes_ = model_data['classes']
-        self.feature_names_ = model_data['feature_names']
-        self.class_mapping_ = model_data['class_mapping']
-        self.config = model_data.get('config', {})
+
+        # Backward compatibility: older artifacts may pickle the whole
+        # SupervisedClassifier object instead of the expected dict payload.
+        if isinstance(model_data, SupervisedClassifier):
+            self.model = model_data.model
+            self.classes_ = model_data.classes_
+            self.feature_names_ = model_data.feature_names_
+            self.class_mapping_ = model_data.class_mapping_
+            self.config = model_data.config
+        elif isinstance(model_data, dict):
+            self.model = model_data['model']
+            self.classes_ = model_data['classes']
+            self.feature_names_ = model_data['feature_names']
+            self.class_mapping_ = model_data['class_mapping']
+            self.config = model_data.get('config', {})
+        else:
+            raise ValueError(
+                f"Unsupported classifier artifact format: {type(model_data).__name__}"
+            )
         
         logger.info(f"Model loaded from {filepath}")
         logger.info(f"Classes: {self.classes_}")

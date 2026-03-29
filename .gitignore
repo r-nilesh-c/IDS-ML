@@ -50,7 +50,7 @@ dataset/
 data/live/
 data/multimodal/
 data/multimodal_real/
-data/public_medical/
+dataset/public_medical/
 
 # Trained model artifacts
 models/
@@ -78,3 +78,31 @@ reports/live/
 tmp/
 *.tmp
 *.bak
+
+# Additions for completeness
+# Ignore all logs, models, data, and report files
+logs/
+models/
+data/
+reports/
+*.log
+*.jsonl
+*.csv
+*.h5
+*.keras
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.ckpt
+*.pth
+*.onnx
+*.pb
+*.tflite
+*.weights
+*.pt
+*.sav
+*.dat
+*.tmp
+*.bak
+cmd.txt

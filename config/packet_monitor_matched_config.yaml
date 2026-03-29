@@ -44,7 +44,7 @@ report_path: "reports/evaluation.json"
 # - autoencoder_best.keras: Trained autoencoder model
 # - isolation_forest.pkl: Trained Isolation Forest model
 # - fusion_params.pkl: Fusion module normalization parameters and threshold
-model_save_path: "models/"
+model_save_path: "models/packet_monitor_matched"
 
 # ============================================================================
 # PREPROCESSING CONFIGURATION
@@ -290,10 +290,6 @@ cascaded_ids:
     # threshold (before runtime scaling). This keeps medium alerts stable while
     # allowing Stage-1 runtime loosening for recall.
     medium_requires_base_stage1: true
-    # Minimum classifier confidence required to accept Stage-2 ATTACK decisions.
-    # - Values in [0.0, 1.0]. Default 0.35 reduces low-confidence false positives
-    # - Set to 0.0 to disable this additional gate (backward compatible)
-    min_confidence: 0.35
     # Legacy single-threshold option (kept for backward compatibility):
     # attack_probability_threshold: 0.30
     # Feature representation used for Stage-2 training/inference.

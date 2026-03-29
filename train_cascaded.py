@@ -39,6 +39,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# Features that can be computed by the live packet monitor pipeline.
+PACKET_MONITOR_FEATURES = [
+    'Fwd Packets/s',
+    'Active Mean',
+    'FIN Flag Count',
+    'Fwd IAT Total',
+    'Fwd PSH Flags',
+    'Bwd IAT Total',
+    'Subflow Fwd Packets',
+    'Fwd Avg Bytes/Bulk',
+    'Bwd Packet Length Max',
+    'Idle Mean',
+    'Flow Bytes/s',
+    'Bwd Avg Bulk Rate',
+]
+
+
 def set_random_seeds(seed: int):
     """Set random seeds for reproducibility."""
     random.seed(seed)
@@ -69,6 +86,68 @@ def load_config(config_path: str) -> dict:
     return config
 
 
+def resolve_fusion_config(config: dict) -> dict:
+    """Resolve Stage-1 fusion config with explicit precedence.
+
+    Precedence:
+    1) cascaded_ids.stage1.threshold_percentile / fusion_weights
+    2) fusion.percentile / fusion weights
+    """
+    fusion_cfg = dict(config.get('fusion', {}))
+    cascaded_cfg = config.get('cascaded_ids', {}) if isinstance(config.get('cascaded_ids', {}), dict) else {}
+    stage1_cfg = cascaded_cfg.get('stage1', {}) if isinstance(cascaded_cfg.get('stage1', {}), dict) else {}
+
+    stage1_percentile = stage1_cfg.get('threshold_percentile')
+    if stage1_percentile is not None:
+        old = fusion_cfg.get('percentile')
+        if old is not None and float(old) != float(stage1_percentile):
+            logger.warning(
+                "Config percentile mismatch detected: fusion.percentile=%s, "
+                "cascaded_ids.stage1.threshold_percentile=%s. "
+                "Using cascaded_ids.stage1.threshold_percentile for training.",
+                old,
+                stage1_percentile,
+            )
+        fusion_cfg['percentile'] = stage1_percentile
+
+    fusion_weights = stage1_cfg.get('fusion_weights')
+    if isinstance(fusion_weights, dict):
+        ae_w = fusion_weights.get('autoencoder')
+        iso_w = fusion_weights.get('isolation')
+        if ae_w is not None:
+            fusion_cfg['weight_autoencoder'] = ae_w
+        if iso_w is not None:
+            fusion_cfg['weight_isolation'] = iso_w
+
+    return fusion_cfg
+
+
+def select_packet_monitor_features(df_clean, require_all: bool = True):
+    """Select packet-monitor-compatible features from cleaned data."""
+    available = [f for f in PACKET_MONITOR_FEATURES if f in df_clean.columns]
+    missing = [f for f in PACKET_MONITOR_FEATURES if f not in df_clean.columns]
+
+    if require_all and missing:
+        raise ValueError(
+            "Missing packet-monitor features required for training: "
+            f"{missing}"
+        )
+
+    if not available:
+        raise ValueError("No packet-monitor features found in cleaned dataset")
+
+    if missing:
+        logger.warning(
+            "Packet-monitor feature profile enabled, but %d features are missing. "
+            "Training will continue with %d available features.",
+            len(missing),
+            len(available),
+        )
+
+    subset_cols = available + ['Label']
+    return df_clean[subset_cols].copy(), available
+
+
 def main():
     """Main training pipeline for cascaded system."""
     
@@ -77,6 +156,21 @@ def main():
                        help='Path to configuration file')
     parser.add_argument('--optimize-stage2', action='store_true',
                        help='Perform hyperparameter optimization for Stage 2')
+    parser.add_argument(
+        '--feature-profile',
+        type=str,
+        default='packet',
+        choices=['packet', 'full'],
+        help=(
+            'Feature profile to train on: packet (12 live packet monitor features) '
+            'or full (all numeric features).'
+        ),
+    )
+    parser.add_argument(
+        '--allow-missing-packet-features',
+        action='store_true',
+        help='Allow training with available subset if some packet-profile features are missing.',
+    )
     args = parser.parse_args()
     
     print("=" * 80)
@@ -121,6 +215,23 @@ def main():
         df_clean = preprocessing.clean_data(df)
         logger.info(f"After cleaning: {len(df_clean)} samples")
         print(f"  After cleaning: {len(df_clean)} samples")
+
+        selected_features = None
+        if args.feature_profile == 'packet':
+            df_clean, selected_features = select_packet_monitor_features(
+                df_clean,
+                require_all=not args.allow_missing_packet_features,
+            )
+            logger.info(
+                "Using packet feature profile with %d features", len(selected_features)
+            )
+            print(f"  Feature profile: packet ({len(selected_features)} features)")
+        else:
+            selected_features = [col for col in df_clean.columns if col != 'Label']
+            logger.info(
+                "Using full feature profile with %d features", len(selected_features)
+            )
+            print(f"  Feature profile: full ({len(selected_features)} features)")
         
         benign_df, attack_df = preprocessing.split_benign_attack(df_clean)
         logger.info(f"Benign samples: {len(benign_df)}, Attack samples: {len(attack_df)}")
@@ -141,7 +252,7 @@ def main():
         y_test_labels = data_splits['y_test_labels']  # String labels for evaluation
         
         n_features = X_train_benign.shape[1]
-        feature_names = [col for col in benign_df.columns if col != 'Label']
+        feature_names = list(selected_features)
         
         logger.info(f"Stage 1 training data: {X_train_benign.shape[0]} benign samples")
         logger.info(f"Stage 1 validation data: {X_val_benign.shape[0]} benign samples")
@@ -188,7 +299,7 @@ def main():
         recon_errors_val = autoencoder.compute_reconstruction_error(X_val_benign)
         iso_scores_val = isolation_forest.compute_anomaly_score(X_val_benign)
         
-        fusion_config = config.get('fusion', {})
+        fusion_config = resolve_fusion_config(config)
         fusion = FusionModule(fusion_config)
         fusion.fit_threshold(recon_errors_val, iso_scores_val)
         
@@ -278,6 +389,23 @@ def main():
         classifier.save(classifier_path)
         print(f"\n[OK] Stage 2 model saved:")
         print(f"  - Supervised Classifier: {classifier_path}")
+
+        # Save scaler and selected features for live monitoring consistency.
+        scaler_path = os.path.join(save_dir, 'scaler.pkl')
+        with open(scaler_path, 'wb') as f:
+            pickle.dump(data_splits['scaler'], f)
+        selected_features_path = os.path.join(save_dir, 'selected_features.pkl')
+        with open(selected_features_path, 'wb') as f:
+            pickle.dump(
+                {
+                    'selected_features': selected_features,
+                    'n_features': len(selected_features),
+                    'feature_profile': args.feature_profile,
+                },
+                f,
+            )
+        print(f"  - Scaler: {scaler_path}")
+        print(f"  - Selected features: {selected_features_path}")
         
         print("\n" + "-" * 80)
         print("TRAINING SUMMARY")

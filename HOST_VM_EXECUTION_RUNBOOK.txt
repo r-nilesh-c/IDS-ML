@@ -1,0 +1,71 @@
+HOST + VM EXECUTION RUNBOOK
+
+==================================================
+HOST MACHINE (IDS)
+==================================================
+
+1) Activate environment
+conda activate hybrid-ids
+
+2) Optional: list interfaces
+python -c "from scapy.all import get_if_list; print('\n'.join(get_if_list()))"
+
+3) Start IDS in model-only mode (no SYN heuristics)
+python live_packet_monitor.py --interface "\Device\NPF_{81CD51EA-4A7D-463A-970B-71308000370A}" --window-seconds 2 --flow-timeout-seconds 5 --status-seconds 2 --capture-filter "tcp or udp" --max-active-flows 12000 --max-ready-flows-per-window 1200 --max-capture-per-window 2000 --packet-sampling-n 2
+
+4) Stop IDS when done
+Ctrl+C
+
+
+==================================================
+VM MACHINE (ATTACK GENERATOR)
+==================================================
+
+1) Install dependency
+pip install scapy
+
+2) Run Port Scan demo
+python demo_network_attack_port_scan.py --target-ip 192.168.56.1 --count 1200 --pps 150 --batch-size 300
+
+3) Run SYN Flood demo
+python demo_network_attack_syn_flood.py --target-ip 192.168.56.1 --count 1500 --pps 180 --batch-size 300
+
+4) Run UDP Flood demo (fixed target port, stronger anomaly signal)
+python demo_network_attack_udp_flood.py --target-ip 192.168.56.1 --target-port 9999 --count 2200 --flows 1 --pps 220 --batch-size 300
+
+5) Run Novel Hybrid attack (unseen style for anomaly testing)
+python demo_network_attack_novel_hybrid.py --target-ip 192.168.56.1 --count 2400 --pps 180 --burst-size 35 --burst-gap-ms 70 --udp-ratio 0.6
+
+If achieved rate is much lower than target rate:
+- Increase --batch-size to 300 or 500 on VM scripts.
+- Keep pps <= 250 for Windows VMs using Scapy send().
+
+
+==================================================
+OPTIONAL: DATASET-LABEL REPLAY (IF CSV EXISTS ON MACHINE)
+==================================================
+
+PortScan replay:
+python scripts/replay_attack_from_label.py --dataset-csv dataset/cic-ids2017/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv --label PortScan --target-ip 192.168.56.1 --count 1800 --pps 180
+
+DDoS replay:
+python scripts/replay_attack_from_label.py --dataset-csv dataset/cic-ids2017/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv --label DDoS --target-ip 192.168.56.1 --count 2200 --pps 220
+
+DoS Hulk replay:
+python scripts/replay_attack_from_label.py --dataset-csv dataset/cic-ids2017/Wednesday-workingHours.pcap_ISCX.csv --label "DoS Hulk" --target-ip 192.168.56.1 --count 2200 --pps 220
+
+Bot replay:
+python scripts/replay_attack_from_label.py --dataset-csv dataset/cic-ids2017/Friday-WorkingHours-Morning.pcap_ISCX.csv --label Bot --target-ip 192.168.56.1 --count 1500 --pps 160
+
+
+==================================================
+IF VM DOES NOT HAVE PROJECT STRUCTURE
+==================================================
+
+Copy these standalone files to VM:
+- demo_network_attack_port_scan.py
+- demo_network_attack_syn_flood.py
+- demo_network_attack_udp_flood.py
+- demo_network_attack_novel_hybrid.py
+
+Then run the VM commands from the same folder.
